@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+
+    "moduleResolution": "node",
+    "target": "es5",
+    "declaration": true,
+    "lib": [
+      "es5",
+      "es2015",
+      "es2016"
+    ]
+    //    "sourceMap": true,
+//    "inlineSourceMap": true,
+//    "inlineSources": true
+  },
+  "exclude": [
+    "node_modules"
+  ]
+}

@@ -2,9 +2,15 @@
   "name": "centrifugo-node-client",
   "version": "1.0.0",
   "description": "",
+  "author": "Bogdan Shapoval <it.targus@gmail.com>",
+  "license": "MIT",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "redis": "^2.8.0",
+    "@types/redis": "^2.8.4"
   },
   "repository": {
     "type": "git",
@@ -14,12 +20,11 @@
     "centrifugo",
     "nodejs"
   ],
-  "author": "Bogdan Shapoval <it.targus@gmail.com>",
-  "license": "MIT",
   "bugs": {
     "url": "https://github.com/Bogdan1975/centrifugo-node-client/issues"
   },
   "homepage": "https://github.com/Bogdan1975/centrifugo-node-client#readme",
+  "engines": {
     "node": ">= 0.8.0"
   }
 }
