@@ -1,6 +1,8 @@
 # Created by .ignore support plugin (hsz.mobi)
 .idea
 node_modules
+dist
 *.js
 *.d.ts
+*.js.map
 package-lock.json
