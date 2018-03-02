@@ -12,9 +12,10 @@ export interface IHttpConfig {
 }
 
 export interface IConfig {
-    namespace?: string,
-    http?: IHttpConfig,
-    redis?: IRedisConfig,
+    namespace?: string;
+    secret?: string;
+    http?: IHttpConfig;
+    redis?: IRedisConfig;
 }
 
 export interface ITranspost {

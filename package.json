@@ -1,6 +1,6 @@
 {
   "name": "centrifugo-node-client",
-  "version": "1.0.0-alpha.1",
+  "version": "1.0.0-alpha.3",
   "description": "",
   "author": "Bogdan Shapoval <it.targus@gmail.com>",
   "license": "MIT",
@@ -10,8 +10,8 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "redis": "^2.8.0",
-    "@types/redis": "^2.8.4"
+    "@types/redis": "^2.8.6",
+    "redis": "^2.8.0"
   },
   "repository": {
     "type": "git",

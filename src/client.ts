@@ -2,6 +2,7 @@ import {IConfig, IHttpConfig, IRedisConfig, IRequest, ITranspost, TransportType}
 import {TransportRedis} from "./transport-redis";
 import {Request} from "./request";
 import {isNumber, isString} from "util";
+import * as crypto from "crypto"
 
 export class Client {
     private defaultRedisConfig: IRedisConfig = {
@@ -12,6 +13,7 @@ export class Client {
     private defaultHttpConfig: IHttpConfig = {};
 
     private namespace: string = null;
+    private secret: string = null;
     private redisConfig: IRedisConfig;
     private httpConfig: IHttpConfig;
 
@@ -21,6 +23,7 @@ export class Client {
         this.redisConfig = config.hasOwnProperty('redis') ? Object.assign({}, this.defaultRedisConfig, config.redis) : null;
         this.httpConfig = config.hasOwnProperty('http') ? Object.assign({}, this.defaultHttpConfig, config.http) : null;
         this.namespace = config.namespace || null;
+        this.secret = config.secret || null;
         if (null != this.httpConfig) {
             if (null == this.redisConfig) {
                 console.log('\x1b[31m%s\x1b[0m', 'Http transport is not implemented yet');
@@ -38,7 +41,7 @@ export class Client {
         }
     }
 
-    public publish(data: any, channel: string = null, userIds: string|number|Array<string>|Array<number> = null): Promise<boolean> {
+    public publish(data: any, channel: string = null, userIds: string|number|Array<string|number> = null): Promise<boolean> {
         const channelName = this.normalizeChannelName(channel, userIds);
         const request = new Request('publish', {
             channel: channelName,
@@ -48,14 +51,27 @@ export class Client {
         return this.sendRequest_(request);
     }
 
+    public generateClientToken(user: string|number, timestamp: string|number = Math.floor(Date.now() / 1000), info: string = '') {
+        if (null == this.secret) {
+            throw new Error('"secret" configuration parameter needed to genereate client token');
+        }
+        timestamp = typeof(timestamp) === 'number' ? timestamp.toString() : timestamp;
+        user = typeof(user) === 'number' ? user.toString() : user;
+        return crypto.createHmac('sha256', this.secret)
+            .update(new Buffer(user, 'utf-8'))
+            .update(new Buffer(timestamp, 'utf-8'))
+            .update(new Buffer(info, 'utf-8'))
+            .digest('hex');
+    };
+
     private isNumeric(n: any): boolean {
         return !isNaN(parseFloat(n)) && isFinite(n);
     }
 
-    private normalizeChannelName (channel: string, userIds: string|number|Array<string>|Array<number>): string {
+    private normalizeChannelName (channel: string, userIds: string|number|Array<string|number>): string {
         let channelName;
-        let serArray = channel.split(':');
-        if (null !== this.namespace && serArray[0] !== this.namespace) {
+        let serArray = null == channel ? [] : channel.split(':');
+        if (null !== this.namespace && (serArray.length === 0 || serArray[0] !== this.namespace)) {
             serArray.unshift(this.namespace);
         }
         channelName = serArray.join(':');
@@ -118,4 +134,5 @@ export class Client {
 
         return transport;
     }
+
 }
