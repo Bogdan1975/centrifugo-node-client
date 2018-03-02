@@ -41,12 +41,19 @@ export class Client {
         }
     }
 
+    public publish(request: Request): Promise<boolean>;
+    public publish(data: any, channel: string, userIds: string|number|Array<string|number>): Promise<boolean>;
     public publish(data: any, channel: string = null, userIds: string|number|Array<string|number> = null): Promise<boolean> {
-        const channelName = this.normalizeChannelName(channel, userIds);
-        const request = new Request('publish', {
-            channel: channelName,
-            data
-        });
+        let request: Request;
+        if (typeof(data) !== 'object' || !(data instanceof Request)) {
+            const channelName = this.normalizeChannelName(channel, userIds);
+            request = new Request('publish', {
+                channel: channelName,
+                data
+            });
+        } else {
+            request = data;
+        }
 
         return this.sendRequest_(request);
     }
