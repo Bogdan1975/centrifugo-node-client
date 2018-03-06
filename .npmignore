@@ -1,7 +1,5 @@
 # Created by .ignore support plugin (hsz.mobi)
 .idea
 package-lock.json
-tsconfig.json
-*.ts
 !*.d.ts
 *.js.map
