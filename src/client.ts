@@ -1,8 +1,17 @@
 import {IConfig, IHttpConfig, IRedisConfig, IRequest, ITranspost, TransportType} from "./interfaces";
 import {TransportRedis} from "./transport-redis";
 import {Request} from "./request";
-import {isNumber, isString} from "util";
 import * as crypto from "crypto"
+import {EventEmitter} from "events";
+
+export type CB = (e: ICgoEvent) => any;
+export interface ICgoEvent {
+    transport: string;
+    type?: string;
+    data: any;
+}
+
+const TRANSPORT_NAMES = ['redis', 'http'];
 
 export class Client {
     private defaultRedisConfig: IRedisConfig = {
@@ -18,6 +27,13 @@ export class Client {
     private httpConfig: IHttpConfig;
 
     private transports: Array<ITranspost> = [];
+
+    private ee: EventEmitter = new EventEmitter();
+
+    private listeners: {[index: string]: Array<CB>} = {
+        redisError: []
+    };
+    private transportIsActive: {[index: string]: boolean} = {};
 
     constructor(config: IConfig) {
         this.redisConfig = config.hasOwnProperty('redis') ? Object.assign({}, this.defaultRedisConfig, config.redis) : null;
@@ -35,15 +51,40 @@ export class Client {
         }
         if (null != this.redisConfig) {
             this.transports.push(this.transportFactory('redis', this.redisConfig));
+            this.transportIsActive.redis = false;
         }
         if (null != this.httpConfig) {
             this.transports.push(this.transportFactory('http', this.httpConfig));
+            this.transportIsActive.http = false;
         }
+        // this.ee.addListener('error', this.onError.bind(this));
+        this.ee.on('error', this.onError.bind(this));
+        this.ee.on('active', this.onActive.bind(this));
+    }
+
+    public addRedisErrorListener(cb: CB) {
+        this.listeners.redisError.push(cb);
+    }
+
+    public isActiveTransport(transportName: string) {
+        if (-1 === TRANSPORT_NAMES.indexOf(transportName)) {
+            throw new Error(`Unknown transport '${transportName}'`);
+        }
+
+        return this.transportIsActive[transportName];
+    }
+
+    public isActive() {
+        return (null != this.redisConfig && this.isActiveTransport('redis'))
+            || (null != this.httpConfig && this.isActiveTransport('http'));
     }
 
     public publish(request: Request): Promise<boolean>;
     public publish(data: any, channel: string, userIds: string|number|Array<string|number>): Promise<boolean>;
     public publish(data: any, channel: string = null, userIds: string|number|Array<string|number> = null): Promise<boolean> {
+        if (!this.isActive()) {
+            return Promise.resolve(false);
+        }
         let request: Request;
         if (typeof(data) !== 'object' || !(data instanceof Request)) {
             const channelName = this.normalizeChannelName(channel, userIds);
@@ -70,6 +111,15 @@ export class Client {
             .update(new Buffer(info, 'utf-8'))
             .digest('hex');
     };
+
+    private onError(e: ICgoEvent) {
+        console.error('Client redis error');
+        this.listeners.redisError.forEach(cb => cb(e));
+    }
+
+    private onActive(e: ICgoEvent) {
+        this.transportIsActive[e.transport] = e.data;
+    }
 
     private isNumeric(n: any): boolean {
         return !isNaN(parseFloat(n)) && isFinite(n);
@@ -115,17 +165,16 @@ export class Client {
     }
 
     private sendRequest_(request: IRequest, i = 0): Promise<boolean> {
+        if (i >= this.transports.length) {
+            throw new Error('Can\'t send message by any transport');
+        }
         const transport = this.transports[i];
 
         return transport.sendRequest(request).then(res => {
             return res;
         }).catch( e => {
             i++;
-            if (i < this.transports.length) {
-                return this.sendRequest_(request, i);
-            } else {
-                throw new Error('Can\'t send message by any transport');
-            }
+            return this.sendRequest_(request, i);
         });
     }
 
@@ -133,7 +182,7 @@ export class Client {
         let transport: ITranspost;
         switch (type) {
             case 'redis':
-                transport = new TransportRedis(config);
+                transport = new TransportRedis(config, this.ee);
                 break;
             default:
                 throw new Error(`Unknown '${type}' transport type`);
